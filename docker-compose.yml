@@ -1,0 +1,4 @@
+version: "3.9"
+services:
+  converter:
+    image: ghcr.io/greepthesheep/node-music-converter/music-converter
