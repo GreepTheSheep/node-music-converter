@@ -10,37 +10,43 @@ const sourceDir = String(process.env.SOURCE_DIR) || "/source";
 // dest files located in DEST_DIR (default /dest)
 const destDir = String(process.env.DEST_DIR) || "/dest";
 
-let files = Array.from(fs.readdirSync(sourceDir, {recursive: true}));
-let filesToConvert = [];
 
-for (let i = 0; i < files.length; i++) {
-    let pathSource = path.join(sourceDir, files[i]),
-        pathDest = path.join(destDir, files[i]);
-    // check if dir, create it
-    if (fs.lstatSync(pathSource).isDirectory()) {
-        if (!fs.existsSync(pathDest)) {
-            console.log("Create dir:", pathDest);
-            fs.mkdirSync(pathDest);
+fetchFiles();
+
+function fetchFiles() {
+    let files = Array.from(fs.readdirSync(sourceDir, {recursive: true})),
+        filesToConvert = [];
+
+    for (let i = 0; i < files.length; i++) {
+        let pathSource = path.join(sourceDir, files[i]),
+            pathDest = path.join(destDir, files[i]);
+        // check if dir, create it
+        if (fs.lstatSync(pathSource).isDirectory()) {
+            if (!fs.existsSync(pathDest)) {
+                console.log("Create dir:", pathDest);
+                fs.mkdirSync(pathDest);
+            }
         }
-    }
 
-    if (fs.lstatSync(pathSource).isFile()) {
-        if (acceptedFormats.includes(path.extname(pathSource).toLowerCase())) {
-            // convert it to pathDest
-            let fileDest = pathDest.substring(0, pathDest.lastIndexOf(".")) + ".mp3";
-            if (fs.existsSync(fileDest)) {
-                console.log("File", fileDest, "exists already, skipping");
-            } else {
-                filesToConvert.push({source: pathSource, dest: fileDest});
+        if (fs.lstatSync(pathSource).isFile()) {
+            if (acceptedFormats.includes(path.extname(pathSource).toLowerCase())) {
+                // convert it to pathDest
+                let fileDest = pathDest.substring(0, pathDest.lastIndexOf(".")) + ".mp3";
+                if (fs.existsSync(fileDest)) {
+                    console.log("File", fileDest, "exists already, skipping");
+                } else {
+                    filesToConvert.push({source: pathSource, dest: fileDest});
+                }
             }
         }
     }
-    convert();
+    if (filesToConvert.length > 0) convert(filesToConvert);
 }
 
-function convert() {
+function convert(filesToConvert) {
+    console.log(filesToConvert);
     let file = filesToConvert[0];
-    console.log("Processing file:", file);
+    console.log("Processing file:", file.source);
     ffmpeg(file.source)
         .audioBitrate(256)
         .audioCodec('libmp3lame')
@@ -51,13 +57,13 @@ function convert() {
         .on('error', function(err, stdout, stderr) {
             console.log(file.source, 'Cannot process file: ' + err.message);
             filesToConvert.shift();
-            convert();
+            convert(filesToConvert);
         })
         .on('end', function(stdout, stderr) {
-            console.log('Converting succeeded to:',pathDest);
-            if (filesToConvert.length > 0) {
+            console.log('Converting succeeded to:', file.dest);
+            if (filesToConvert.length > 1) {
                 filesToConvert.shift();
-                convert();
+                convert(filesToConvert);
             } else process.exit(0);
         });
 }
