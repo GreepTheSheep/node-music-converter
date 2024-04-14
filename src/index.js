@@ -11,6 +11,7 @@ const sourceDir = String(process.env.SOURCE_DIR) || "/source";
 const destDir = String(process.env.DEST_DIR) || "/dest";
 
 let files = Array.from(fs.readdirSync(sourceDir, {recursive: true}));
+let filesToConvert = [];
 
 for (let i = 0; i < files.length; i++) {
     let pathSource = path.join(sourceDir, files[i]),
@@ -30,21 +31,33 @@ for (let i = 0; i < files.length; i++) {
             if (fs.existsSync(fileDest)) {
                 console.log("File", fileDest, "exists already, skipping");
             } else {
-                console.log("Processing file:", pathSource);
-                ffmpeg(pathSource)
-                    .audioBitrate(256)
-                    .audioCodec('libmp3lame')
-                    .save(fileDest)
-                    .on('progress', function(progress) {
-                        console.log(pathSource, 'Processing: ' + progress.percent + '% done');
-                    })
-                    .on('error', function(err, stdout, stderr) {
-                        console.log(pathSource, 'Cannot process file: ' + err.message);
-                    })
-                    .on('end', function(stdout, stderr) {
-                        console.log('Converting succeeded to:',pathDest);
-                    });
+                filesToConvert.push(pathSource);
             }
         }
     }
+    convert();
+}
+
+function convert() {
+    let file = filesToConvert[0];
+    console.log("Processing file:", file);
+    ffmpeg(file)
+        .audioBitrate(256)
+        .audioCodec('libmp3lame')
+        .save(fileDest)
+        .on('progress', function(progress) {
+            console.log(file, 'Processing: ' + progress.percent + '% done');
+        })
+        .on('error', function(err, stdout, stderr) {
+            console.log(file, 'Cannot process file: ' + err.message);
+            filesToConvert.shift();
+            convert();
+        })
+        .on('end', function(stdout, stderr) {
+            console.log('Converting succeeded to:',pathDest);
+            if (filesToConvert.length > 0) {
+                filesToConvert.shift();
+                convert();
+            } else process.exit(0);
+        });
 }

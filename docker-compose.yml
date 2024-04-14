@@ -2,3 +2,10 @@ version: "3.9"
 services:
   converter:
     image: ghcr.io/greepthesheep/node-music-converter/music-converter
+    volumes:
+      - /mnt/data/Jellyfin-Music:/source
+      - /mnt/localdata/jellyfin-music-mp3:/dest
+    environment:
+      TZ: Europe/Paris
+      SOURCE_DIR: /source
+      DEST_DIR: /dest
