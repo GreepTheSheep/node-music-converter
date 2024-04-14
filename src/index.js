@@ -44,7 +44,7 @@ function fetchFiles() {
 }
 
 function convert(filesToConvert) {
-    console.log(filesToConvert);
+    console.log("-- Remaining files:", filesToConvert.length);
     let file = filesToConvert[0];
     console.log("Processing file:", file.source);
     ffmpeg(file.source)
