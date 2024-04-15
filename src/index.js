@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 
-const acceptedFormats = [".flac", ".mp3", ".wav", ".wma"];
+const acceptedFormats = [".flac", ".mp3", ".wav", ".wma", ".ogg"];
 
 // source files located in SOURCE_DIR (default /source)
 const sourceDir = String(process.env.SOURCE_DIR) || "/source";
