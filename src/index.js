@@ -18,15 +18,17 @@ const deleteDist = Boolean(process.env.DELETE_DEST_ON_START) || false,
 fetchFiles();
 
 function fetchFiles() {
+    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir);
+
     if (deleteDist) {
         console.log("DELETE_DEST_ON_START is set to true, deleting content from", destDir);
-        let destFiles = Array.from(fs.readdirSync(destDir));
+        let destFiles = Array.from(fs.readdirSync(destDir, {recursive: true})).reverse();
         for (let d = 0; d < destFiles.length; d++) {
-            fs.rmSync(destFiles[d], {recursive: true, force: true});
-            console.log(destFiles[d], "is deleted");
+            let filePath = path.join(destDir, destFiles[d]);
+            fs.rmSync(filePath, {recursive: true, force: true});
+            console.log(filePath, "is deleted");
         }
     }
-    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir);
 
     let files = Array.from(fs.readdirSync(sourceDir, {recursive: true})),
         filesToConvert = [];
