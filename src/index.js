@@ -19,8 +19,12 @@ fetchFiles();
 
 function fetchFiles() {
     if (deleteDist) {
-        console.log("DELETE_DEST_ON_START is set to true, deleting and recreating", destDir);
-        fs.rmSync(destDir, {recursive: true, force: true});
+        console.log("DELETE_DEST_ON_START is set to true, deleting content from", destDir);
+        let destFiles = Array.from(fs.readdirSync(destDir));
+        for (let d = 0; d < destFiles.length; d++) {
+            fs.rmSync(destFiles[d], {recursive: true, force: true});
+            console.log(destFiles[d], "is deleted");
+        }
     }
     if (!fs.existsSync(destDir)) fs.mkdirSync(destDir);
 
