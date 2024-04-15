@@ -9,3 +9,6 @@ services:
       TZ: Europe/Paris
       SOURCE_DIR: /source
       DEST_DIR: /dest
+      IGNORE_EXISTS: false
+      DELETE_DEST_ON_START: true
+      MP3_BITRATE: 256

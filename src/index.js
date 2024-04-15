@@ -10,10 +10,20 @@ const sourceDir = String(process.env.SOURCE_DIR) || "/source";
 // dest files located in DEST_DIR (default /dest)
 const destDir = String(process.env.DEST_DIR) || "/dest";
 
+const deleteDist = Boolean(process.env.DELETE_DEST_ON_START) || false,
+    igonreIfExists = Boolean(process.env.IGNORE_EXISTS) || true,
+    audioBitrate = Number(process.env.MP3_BITRATE) || 256;
+
 
 fetchFiles();
 
 function fetchFiles() {
+    if (deleteDist) {
+        console.log("DELETE_DEST_ON_START is set to true, deleting and recreating", destDir);
+        fs.rmSync(destDir, {recursive: true, force: true});
+    }
+    if (!fs.existsSync(destDir)) fs.mkdirSync(destDir);
+
     let files = Array.from(fs.readdirSync(sourceDir, {recursive: true})),
         filesToConvert = [];
 
@@ -33,9 +43,10 @@ function fetchFiles() {
                 // convert it to pathDest
                 let fileDest = pathDest.substring(0, pathDest.lastIndexOf(".")) + ".mp3";
                 if (fs.existsSync(fileDest)) {
-                    console.log("File", fileDest, "exists already, skipping");
+                    if (igonreIfExists) console.log("File", fileDest, "exists already, skipping");
+                    else filesToConvert.push({source: pathSource, dest: fileDest, existsAlready: true});
                 } else {
-                    filesToConvert.push({source: pathSource, dest: fileDest});
+                    filesToConvert.push({source: pathSource, dest: fileDest, existsAlready: false});
                 }
             }
         }
@@ -47,23 +58,31 @@ function convert(filesToConvert) {
     console.log("-- Remaining files:", filesToConvert.length);
     let file = filesToConvert[0];
     console.log("Processing file:", file.source);
-    ffmpeg(file.source)
-        .audioBitrate(256)
-        .audioCodec('libmp3lame')
-        .save(file.dest)
-        .on('progress', function(progress) {
-            console.log(file.source, 'Processing: ' + progress.percent + '% done');
-        })
-        .on('error', function(err, stdout, stderr) {
-            console.log(file.source, 'Cannot process file: ' + err.message);
+    try {
+        if (file.existsAlready) fs.unlinkSync(file.dest);
+        ffmpeg(file.source)
+            .audioBitrate(audioBitrate)
+            .audioCodec('libmp3lame')
+            .save(file.dest)
+            .on('error', function(err, stdout, stderr) {
+                console.log(file.source, 'Cannot process file: ' + err.message);
+                if (filesToConvert.length > 1) {
+                    filesToConvert.shift();
+                    convert(filesToConvert);
+                } else process.exit(0);
+            })
+            .on('end', function(stdout, stderr) {
+                console.log('Converting succeeded to:', file.dest);
+                if (filesToConvert.length > 1) {
+                    filesToConvert.shift();
+                    convert(filesToConvert);
+                } else process.exit(0);
+            });
+    } catch (err) {
+        console.error("Error while processing", file.source, err);
+        if (filesToConvert.length > 1) {
             filesToConvert.shift();
             convert(filesToConvert);
-        })
-        .on('end', function(stdout, stderr) {
-            console.log('Converting succeeded to:', file.dest);
-            if (filesToConvert.length > 1) {
-                filesToConvert.shift();
-                convert(filesToConvert);
-            } else process.exit(0);
-        });
+        } else process.exit(0);
+    }
 }
